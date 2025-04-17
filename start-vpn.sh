@@ -29,34 +29,53 @@ echo "Iniciando conexión VPN a $VPN_HOST..."
 CONTAINER_IP=$(hostname -i)
 echo "IP del contenedor: $CONTAINER_IP"
 
-# Configurar IP forwarding
-echo 1 > /proc/sys/net/ipv4/ip_forward
-echo "IP forwarding habilitado"
+# Configurar IP forwarding si es posible
+if [ -w /proc/sys/net/ipv4/ip_forward ]; then
+    echo 1 > /proc/sys/net/ipv4/ip_forward
+    echo "IP forwarding habilitado a nivel del sistema"
+else
+    echo "Advertencia: No se puede habilitar IP forwarding a nivel de sistema"
+    echo "Utilizando sysctl para intentar habilitar IP forwarding"
+    sysctl -w net.ipv4.ip_forward=1 || echo "No se pudo habilitar IP forwarding, pero continuando..."
+fi
 
 # Iniciar OpenConnect en modo background
+echo "Iniciando OpenConnect..."
+if [ ! -z "$VPN_GROUP" ]; then
+    AUTH_GROUP_ARG="--authgroup=$VPN_GROUP"
+else
+    AUTH_GROUP_ARG=""
+fi
+
 echo "$VPN_PASS" | openconnect --background \
     --user="$VPN_USER" \
     --passwd-on-stdin \
-    --authgroup="$VPN_GROUP" \
+    $AUTH_GROUP_ARG \
     --no-dtls \
     "$VPN_HOST"
 
-echo "Conexión VPN establecida. Configurando rutas..."
+echo "Conexión VPN solicitada. Esperando interfaz tun0..."
 
 # Esperar a que se establezca la interfaz tun0
 COUNT=0
 while [ $COUNT -lt 30 ]; do
     if ip link show | grep -q tun0; then
+        echo "Interfaz tun0 detectada!"
         break
     fi
+    echo "Esperando a la interfaz tun0... ($COUNT/30)"
     sleep 1
     COUNT=$((COUNT+1))
 done
 
 if ! ip link show | grep -q tun0; then
-    echo "Error: No se pudo establecer la interfaz tun0"
+    echo "Error: No se pudo establecer la interfaz tun0 después de 30 segundos"
+    echo "Mostrando logs de OpenConnect:"
+    cat /var/log/openconnect.log 2>/dev/null || echo "No se encontró el archivo de log"
     exit 1
 fi
+
+echo "Conexión VPN establecida correctamente."
 
 # Configurar reglas para compartir las IPs específicas
 echo "Configurando reglas de iptables para compartir IPs..."
@@ -65,22 +84,25 @@ echo "Configurando reglas de iptables para compartir IPs..."
 HOST_GATEWAY=$(ip route | grep default | awk '{print $3}')
 echo "Gateway del host: $HOST_GATEWAY"
 
-# Configurar proxy ARP para las IPs compartidas
+# Imprimir información de red para depuración
+echo "Interfaces de red:"
+ip addr show
+
+echo "Tablas de enrutamiento:"
+ip route
+
+# Configurar reglas para las IPs compartidas
 for IP in $(echo $SHARED_IPS | tr ',' ' '); do
-    echo "Configurando proxy ARP para $IP"
+    echo "Configurando reglas para $IP"
     
-    # Agregar ruta para la IP específica a través de la VPN
-    ip route add $IP/32 dev tun0
+    # Intentar agregar ruta para la IP específica
+    ip route add $IP/32 dev tun0 || echo "No se pudo añadir ruta para $IP, pero continuando..."
     
-    # Configurar DNAT para redirigir conexiones a esa IP
-    iptables -t nat -A PREROUTING -d $IP -j DNAT --to-destination $IP
-    
-    # Permitir tráfico de reenvío hacia la VPN
-    iptables -A FORWARD -d $IP -j ACCEPT
-    iptables -A FORWARD -s $IP -j ACCEPT
-    
-    # Configurar SNAT para el tráfico de retorno
-    iptables -t nat -A POSTROUTING -s $IP -j SNAT --to-source $CONTAINER_IP
+    # Intentar configurar reglas de iptables
+    iptables -t nat -A PREROUTING -d $IP -j DNAT --to-destination $IP || echo "Error en DNAT para $IP"
+    iptables -A FORWARD -d $IP -j ACCEPT || echo "Error en FORWARD para $IP"
+    iptables -A FORWARD -s $IP -j ACCEPT || echo "Error en FORWARD para $IP"
+    iptables -t nat -A POSTROUTING -s $IP -j SNAT --to-source $CONTAINER_IP || echo "Error en SNAT para $IP"
     
     echo "Configuración para $IP completada"
 done

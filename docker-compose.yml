@@ -11,7 +11,8 @@ services:
       dockerfile: Dockerfile
     container_name: openconnect-vpn
     restart: unless-stopped
-    network_mode: "host" # Esto permite compartir la red con el host
+    networks:
+      vpn_network:
     volumes:
       - ./start-vpn.sh:/scripts/start-vpn.sh
     environment:
@@ -25,3 +26,5 @@ services:
       - SYS_ADMIN        # Necesario para algunas operaciones de red
     devices:
       - /dev/net/tun     # Necesario para crear interfaces tun/tap
+    sysctls:
+      - net.ipv4.ip_forward=1  # Activar el reenvío de IP a nivel de contenedor

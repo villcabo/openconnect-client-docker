@@ -26,4 +26,4 @@ COPY start-vpn.sh /scripts/
 RUN chmod +x /scripts/start-vpn.sh
 
 # Punto de entrada del contenedor
-CMD ["/scripts/start-vpn.sh"]
+ENTRYPOINT ["/bin/bash", "/scripts/start-vpn.sh"]

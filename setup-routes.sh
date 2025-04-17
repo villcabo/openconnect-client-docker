@@ -2,7 +2,7 @@
 # Script para configurar las rutas al host desde la máquina local
 
 # Obtener la IP del contenedor VPN
-CONTAINER_ID=$(docker-compose ps -q vpn)
+CONTAINER_ID=$(docker compose ps -q vpn)
 if [ -z "$CONTAINER_ID" ]; then
     echo "Error: El contenedor VPN no está en ejecución"
     exit 1
