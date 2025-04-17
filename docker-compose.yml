@@ -1,0 +1,27 @@
+name: openconnect
+
+networks:
+  vpn_network:
+    driver: bridge
+
+services:
+  vpn:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openconnect-vpn
+    restart: unless-stopped
+    network_mode: "host" # Esto permite compartir la red con el host
+    volumes:
+      - ./start-vpn.sh:/scripts/start-vpn.sh
+    environment:
+      VPN_HOST: ${VPN_HOST}
+      VPN_USER: ${VPN_USER}
+      VPN_PASS: ${VPN_PASS}
+      VPN_GROUP: ${VPN_GROUP}
+      SHARED_IPS: ${SHARED_IPS}
+    cap_add:
+      - NET_ADMIN        # Necesario para configurar interfaces de red
+      - SYS_ADMIN        # Necesario para algunas operaciones de red
+    devices:
+      - /dev/net/tun     # Necesario para crear interfaces tun/tap
