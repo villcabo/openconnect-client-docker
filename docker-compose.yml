@@ -3,6 +3,11 @@ name: openconnect
 networks:
   vpn_network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.24.0.0/24  # Asegúrate que coincida con tu br-f1d57739c958
+          gateway: 172.24.0.1   # Asegúrate que coincida con tu br-f1d57739c958
+          # Puedes elegir un rango más pequeño si prefieres, ej: 172.24.10.0/24
 
 services:
   vpn:
@@ -13,6 +18,7 @@ services:
     restart: unless-stopped
     networks:
       vpn_network:
+        ipv4_address: 172.24.0.2 # IP estática asignada
     volumes:
       - ./start-vpn.sh:/scripts/start-vpn.sh
     environment:
@@ -27,4 +33,4 @@ services:
     devices:
       - /dev/net/tun     # Necesario para crear interfaces tun/tap
     sysctls:
-      - net.ipv4.ip_forward=1  # Activar el reenvío de IP a nivel de contenedor
+      net.ipv4.ip_forward: 1

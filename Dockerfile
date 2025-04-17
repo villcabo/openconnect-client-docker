@@ -25,5 +25,9 @@ RUN mkdir -p /scripts
 COPY start-vpn.sh /scripts/
 RUN chmod +x /scripts/start-vpn.sh
 
+EXPOSE 443
+EXPOSE 80
+EXPOSE 22
+
 # Punto de entrada del contenedor
-ENTRYPOINT ["/bin/bash", "/scripts/start-vpn.sh"]
+ENTRYPOINT ["/scripts/start-vpn.sh"]
