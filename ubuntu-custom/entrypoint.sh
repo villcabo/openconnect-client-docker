@@ -14,7 +14,7 @@ echo "${BOLD}➔ Configurando OpenVPN ⏳...${NORMAL}"
 echo "$VPN_PASS" | openconnect --background \
     --user="$VPN_USER" \
     --passwd-on-stdin \
-    $AUTH_GROUP_ARG \
+    $VPN_GROUP \
     --no-dtls \
     "$VPN_HOST"
 
