@@ -43,23 +43,17 @@ This project provides a Docker setup to connect to a VPN using OpenConnect, main
 ## Usage
 
 1. Build and start the container:
-   ```
+   ```bash
    docker compose up -d
    ```
 
 2. Check the connection status:
-   ```
+   ```bash
    docker compose logs
    ```
 
-3. Configure routes on your host system (requires sudo permissions):
-   ```
-   chmod +x setup-shared-ip.sh
-   ./setup-shared-ip.sh
-   ```
-
-4. To stop the VPN:
-   ```
+3. To stop the VPN:
+   ```bash
    docker compose down
    ```
 
@@ -67,48 +61,15 @@ This project provides a Docker setup to connect to a VPN using OpenConnect, main
 
 Once the container is running, you need to configure your host system to access the shared IPs:
 
-### Option 1: Configure Routes on the Host
+Configure routes on your host system (requires sudo permissions):
 
-After the container is running, check the logs to find the container's IP address:
-
-```
-docker compose logs vpn
+```bash
+chmod +x setup-shared-ip.sh
 ```
 
-Then, add a route on your host system:
-
+```bash
+./setup-shared-ip.sh
 ```
-sudo ip route add 192.168.226.120/32 via [CONTAINER_IP]
-```
-
-### Option 2: Modify the Hosts File
-
-Alternatively, you can add an entry to your `/etc/hosts` file:
-
-```
-[CONTAINER_IP]    192.168.226.120    # VPN Access
-```
-
-Once configured, you can access `http://192.168.226.120` from your local browser.
-
-## Troubleshooting
-
-If you encounter issues with the connection:
-
-1. Check the container logs:
-   ```
-   docker compose logs -f
-   ```
-
-2. Verify the network routes:
-   ```
-   docker exec vpn-container ip route
-   ```
-
-3. Test connectivity from inside the container:
-   ```
-   docker exec vpn-container ping 192.168.226.120
-   ```
 
 ## Additional Notes
 
