@@ -1,96 +1,116 @@
-# Docker VPN con OpenConnect
+# Docker VPN with OpenConnect
 
-Este proyecto proporciona una configuración Docker para conectarse a una VPN mediante OpenConnect, manteniendo la conexión a internet local y permitiendo acceder a IPs específicas de la red privada desde el host.
+This project provides a Docker setup to connect to a VPN using OpenConnect, maintaining local internet access while allowing access to specific private network IPs from the host.
 
-## Archivos incluidos
+## Prerequisites
 
-- `Dockerfile`: Configura la imagen base con OpenConnect y herramientas necesarias
-- `docker-compose.yml`: Define el servicio y la configuración de red
-- `start-vpn.sh`: Script que gestiona la conexión a la VPN y el enrutamiento
-- `.env.example`: Ejemplo de archivo de variables de entorno
+- Docker and Docker Compose installed on your system.
+- Basic knowledge of networking and VPN configurations.
+- Sudo/root access to configure routes on your host system.
 
-## Configuración
+## Included Files
 
-1. Copia `.env.example` a `.env`:
+- `Dockerfile`: Configures the base image with OpenConnect and necessary tools.
+- `docker-compose.yml`: Defines the service and network configuration.
+- `start-vpn.sh`: Script to manage the VPN connection and routing.
+- `setup-shared-ip.sh`: Script to configure NAT for shared IPs on your local machine.
+- `.env.example`: Example environment variables file.
+
+## Configuration
+
+1. Copy `.env.example` to `.env`:
    ```
    cp .env.example .env
    ```
 
-2. Edita el archivo `.env` con tus credenciales:
+2. Edit the `.env` file with your credentials and configuration:
    ```
    VPN_HOST=rtwork.bancounion.com.bo
-   VPN_USER=tu_usuario
-   VPN_PASS=tu_contraseña
+   VPN_USER=your_username
+   VPN_PASS=your_password
    VPN_GROUP=rwv_sopvulcan
-   SHARED_IPS=192.168.226.120
+   SHARED_IPS=192.168.226.0/24
    ```
 
-## Uso
+### Environment Variables
 
-1. Construye e inicia el contenedor:
-   ```
-   docker-compose up -d
-   ```
+- `VPN_HOST`: The VPN server hostname or IP address.
+- `VPN_USER`: Your VPN username.
+- `VPN_PASS`: Your VPN password.
+- `VPN_GROUP`: The VPN group or profile to connect to.
+- `SHARED_IPS`: Comma-separated list of private network IPs to access through the VPN.
 
-2. Verifica el estado de la conexión:
-   ```
-   docker-compose logs
-   ```
+## Usage
 
-3. Configura las rutas en tu sistema host (requiere permisos sudo):
+1. Build and start the container:
    ```
-   chmod +x setup-routes.sh
-   ./setup-routes.sh
+   docker compose up -d
    ```
 
-4. Para detener la VPN:
+2. Check the connection status:
    ```
-   docker-compose down
+   docker compose logs
    ```
 
-## Acceso a recursos de la VPN
+3. Configure routes on your host system (requires sudo permissions):
+   ```
+   chmod +x setup-shared-ip.sh
+   ./setup-shared-ip.sh
+   ```
 
-Una vez que el contenedor esté en funcionamiento, necesitarás configurar tu sistema host para acceder a las IPs compartidas:
+4. To stop the VPN:
+   ```
+   docker compose down
+   ```
 
-### Opción 1: Configurar rutas en el host
+## Accessing VPN Resources
 
-Una vez que el contenedor esté funcionando, revisa los logs para ver la IP del contenedor:
+Once the container is running, you need to configure your host system to access the shared IPs:
+
+### Option 1: Configure Routes on the Host
+
+After the container is running, check the logs to find the container's IP address:
 
 ```
-docker-compose logs vpn
+docker compose logs vpn
 ```
 
-Luego, agrega una ruta en tu sistema host:
+Then, add a route on your host system:
 
 ```
-sudo ip route add 192.168.226.120/32 via [IP_DEL_CONTENEDOR]
+sudo ip route add 192.168.226.120/32 via [CONTAINER_IP]
 ```
 
-### Opción 2: Modificar archivo hosts
+### Option 2: Modify the Hosts File
 
-Alternativamente, puedes agregar una entrada en tu archivo `/etc/hosts`:
+Alternatively, you can add an entry to your `/etc/hosts` file:
 
 ```
-[IP_DEL_CONTENEDOR]    192.168.226.120    # Acceso VPN
+[CONTAINER_IP]    192.168.226.120    # VPN Access
 ```
 
-Una vez configurado, podrás acceder a `http://192.168.226.120` desde tu navegador local.
+Once configured, you can access `http://192.168.226.120` from your local browser.
 
-## Solución de problemas
+## Troubleshooting
 
-Si tienes problemas con la conexión:
+If you encounter issues with the connection:
 
-1. Verifica los logs del contenedor:
+1. Check the container logs:
    ```
-   docker-compose logs -f
+   docker compose logs -f
    ```
 
-2. Comprueba el estado de las rutas de red:
+2. Verify the network routes:
    ```
    docker exec vpn-container ip route
    ```
 
-3. Prueba la conectividad desde dentro del contenedor:
+3. Test connectivity from inside the container:
    ```
    docker exec vpn-container ping 192.168.226.120
    ```
+
+## Additional Notes
+
+- Ensure that `setup-shared-ip.sh` is executed to configure NAT for shared IPs on your local machine.
+- If this project is hosted on GitHub, your profile picture and name may appear in the repository's contributors section.
