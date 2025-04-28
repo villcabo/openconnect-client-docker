@@ -8,13 +8,18 @@ BOLD="\033[1m"
 NORMAL="\033[0m"
 
 # -----------------------------------------------------------------------------------
-
 # Launch Openvpn
+if [ ! -z "$VPN_GROUP" ]; then
+    AUTH_GROUP_ARG="--authgroup=$VPN_GROUP"
+else
+    AUTH_GROUP_ARG=""
+fi
+
 echo "${BOLD}➔ Configurando OpenVPN ⏳...${NORMAL}"
 echo "$VPN_PASS" | openconnect --background \
     --user="$VPN_USER" \
     --passwd-on-stdin \
-    $VPN_GROUP \
+    $AUTH_GROUP_ARG \
     --no-dtls \
     "$VPN_HOST"
 
