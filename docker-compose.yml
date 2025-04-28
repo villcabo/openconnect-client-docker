@@ -1,24 +1,27 @@
-name: openconnect
+name: openconnect-client
 
 networks:
   vpn_network:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.24.0.0/24  # Asegúrate que coincida con tu br-f1d57739c958
-          gateway: 172.24.0.1   # Asegúrate que coincida con tu br-f1d57739c958
-          # Puedes elegir un rango más pequeño si prefieres, ej: 172.24.10.0/24
+        - subnet: 10.56.11.0/28 # Use /28 for 16 IPs
 
 services:
   vpn:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: openconnect-vpn
+    container_name: openconnect-client
+    build: ubuntu-custom
+    image: villcabo/openconnect-client
     restart: unless-stopped
     networks:
       vpn_network:
-        ipv4_address: 172.24.0.2 # IP estática asignada
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun
+    sysctls:
+      net.ipv4.ip_forward: 1
     volumes:
       - ./start-vpn.sh:/scripts/start-vpn.sh
     environment:
@@ -27,10 +30,3 @@ services:
       VPN_PASS: ${VPN_PASS}
       VPN_GROUP: ${VPN_GROUP}
       SHARED_IPS: ${SHARED_IPS}
-    cap_add:
-      - NET_ADMIN        # Necesario para configurar interfaces de red
-      - SYS_ADMIN        # Necesario para algunas operaciones de red
-    devices:
-      - /dev/net/tun     # Necesario para crear interfaces tun/tap
-    sysctls:
-      net.ipv4.ip_forward: 1
