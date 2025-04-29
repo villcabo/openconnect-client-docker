@@ -25,11 +25,11 @@ This project provides a Docker setup to connect to a VPN using OpenConnect, main
 
 2. Edit the `.env` file with your credentials and configuration:
    ```
-   VPN_HOST=rtwork.bancounion.com.bo
-   VPN_USER=your_username
-   VPN_PASS=your_password
-   VPN_GROUP=rwv_sopvulcan
-   SHARED_IPS=192.168.226.0/24
+   VPN_HOST=host.example.com
+   VPN_USER=username
+   VPN_PASS=password
+   VPN_GROUP=group
+   SHARED_IPS=192.168.0.0/24
    ```
 
 ### Environment Variables
