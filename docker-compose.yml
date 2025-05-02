@@ -18,6 +18,8 @@ services:
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
+    dns:
+      - 8.8.8.8
     devices:
       - /dev/net/tun
     sysctls:
