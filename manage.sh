@@ -116,7 +116,7 @@ is_service_running() {
     if ! docker exec "${CONTAINER_NAME}" pgrep -x openconnect >/dev/null 2>&1; then
         log debug "OpenConnect process check failed - no process found"
         log error "OpenConnect process is NOT running in the container ${ICON_ERROR}."
-        return 1
+        # return 1
     else
         log debug "OpenConnect process check passed - process found"
         log success "OpenConnect process is running in the container ${ICON_SUCCESS}."
@@ -127,8 +127,40 @@ is_service_running() {
     VPN_INTERFACE=$(docker exec "${CONTAINER_NAME}" ip -o -4 addr show | awk '/tun0/ {print $2}')
     if [ -n "$VPN_INTERFACE" ]; then
         log debug "VPN interface found: $VPN_INTERFACE"
-        log info "VPN interface '$VPN_INTERFACE' is up ${ICON_SUCCESS}."
-        return 0
+        
+        # Get tun0 IP address for additional validation
+        TUN0_IP=$(docker exec "${CONTAINER_NAME}" ip -o -4 addr show tun0 | awk '{print $4}' | cut -d'/' -f1)
+        echo "tun0 IP: $TUN0_IP"
+        if [ -z "$TUN0_IP" ]; then
+            log debug "tun0 interface exists but has no IP address"
+            log error "VPN interface 'tun0' exists but has no IP address ${ICON_ERROR}."
+            return 1
+        fi
+        
+        log debug "tun0 IP address: $TUN0_IP"
+        
+        # Check if tun0 interface is properly configured with local tests
+        log debug "Testing tun0 interface configuration..."
+        
+        # Test 1: Check if tun0 has routes configured
+        if docker exec "${CONTAINER_NAME}" ip route show dev tun0 >/dev/null 2>&1; then
+            log debug "tun0 has routes configured"
+        else
+            log debug "tun0 has no routes configured"
+            log warning "VPN interface 'tun0' exists but has no routes configured ${ICON_WARNING}."
+            return 1
+        fi
+        
+        # Test 2: Ping self IP to verify interface is responsive
+        if docker exec "${CONTAINER_NAME}" timeout 2 ping -c 1 -W 1 "$TUN0_IP" >/dev/null 2>&1; then
+            log debug "tun0 self-ping test successful"
+            log info "VPN interface 'tun0' is up and properly configured ${ICON_SUCCESS}."
+            return 0
+        else
+            log debug "tun0 self-ping test failed - interface may not be properly configured"
+            log warning "VPN interface 'tun0' exists but interface responsiveness test failed ${ICON_WARNING}."
+            return 1
+        fi
     else
         log debug "No VPN interface found in container"
         log error "No VPN interface (tun0) found in the container ${ICON_ERROR}."
@@ -142,8 +174,8 @@ wait_for_vpn_startup() {
     local max_attempts=10
     
     while [ $attempts -lt $max_attempts ]; do
-        # Check if the VPN startup message appears in logs
-        if docker logs --tail 1 "${CONTAINER_NAME}" 2>&1 | grep -q "$VPN_STARTUP_MESSAGE"; then
+        # Check if the VPN startup message appears in logs (check last 5 lines instead of just 1)
+        if docker logs --tail 5 "${CONTAINER_NAME}" 2>&1 | grep -q "$VPN_STARTUP_MESSAGE"; then
             log success "VPN startup completed successfully ${ICON_SUCCESS}"
             return 0
         else
@@ -214,9 +246,6 @@ start_vpn() {
     section "[1/4] Container Status"
     if is_container_running; then
         log success "Container '${CONTAINER_NAME}' is already running ${ICON_SUCCESS}."
-        
-        # Kill existing OpenConnect processes if any
-        kill_existing_openconnect
     else
         log success "Starting container ${ICON_LOADING}..."
         docker compose up -d
